@@ -1,0 +1,23 @@
+[versions]
+kotlin = "2.0.0"
+shadow = "7.1.2"
+serialization = "1.7.1"
+library = "1.11.2"
+balancer = "1.4"
+velocity = "3.2.0-SNAPSHOT"
+protocolize = "2.3.3"
+luckperms = "5.4"
+
+[libraries]
+velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
+library = { module = "ru.snapix:snapilibrary-velocity", version.ref = "library" }
+serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+protocolize = { module = "dev.simplix:protocolize-api", version.ref = "protocolize" }
+balancer = { module = "ru.snapix:snapilibrary-velocity", version.ref = "balancer" }
+luckperms = { module = "net.luckperms:api", version.ref = "luckperms" }
+
+[plugins]
+jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
