@@ -1,11 +1,27 @@
 package ru.snapix.snapicooperation.api.events.party
 
-import com.velocitypowered.api.proxy.Player
+import org.bukkit.event.Event
+import org.bukkit.event.HandlerList
+import ru.snapix.library.network.player.NetworkPlayer
 import ru.snapix.snapicooperation.api.Party
 
-data class PartyRemoveUserEvent(val player: Player, val party: Party, val reason: RemoveUserReason)
+class PartyRemoveUserEvent(val removed: NetworkPlayer, val party: Party, val reason: RemoveUserReason) : Event() {
+    override fun getHandlers(): HandlerList {
+        return HANDLERS
+    }
+
+    companion object {
+        val HANDLERS = HandlerList()
+
+        @JvmStatic
+        fun getHandlerList(): HandlerList {
+            return HANDLERS
+        }
+    }
+}
 
 enum class RemoveUserReason {
     PARTY_DISBAND,
-    USER_REMOVE
+    USER_REMOVE,
+    USER_LEAVE
 }

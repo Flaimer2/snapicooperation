@@ -30,10 +30,11 @@ object FriendDatabase {
     }
 
     fun update(user: User) {
+        val value = user.friends.joinToString(":")
         transaction(database) {
             FriendTable.upsert {
                 it[name] = user.name
-                it[friends] = user.friends.joinToString(":")
+                it[friends] = if (value == "") null else value
             }
         }
     }
@@ -49,6 +50,12 @@ object FriendDatabase {
     }
 
     fun toUser(row: ResultRow): User {
-        return User(row[FriendTable.name], row[FriendTable.friends]?.split(":")?.toMutableList() ?: mutableListOf(), mutableSetOf())
+        val friends = row[FriendTable.friends]?.split(":")?.toMutableList() ?: mutableListOf()
+        friends.remove("")
+        return User(
+            row[FriendTable.name],
+            friends,
+            mutableSetOf()
+        )
     }
 }

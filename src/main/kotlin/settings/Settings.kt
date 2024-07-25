@@ -1,8 +1,8 @@
 package ru.snapix.snapicooperation.settings
 
-import ru.snapix.library.config.Configuration
-import ru.snapix.library.config.configurationOptions
-import ru.snapix.library.config.create
+import ru.snapix.library.bukkit.settings.create
+import ru.snapix.library.settings.Configuration
+import ru.snapix.library.settings.configurationOptions
 import ru.snapix.snapicooperation.plugin
 
 object Settings {
