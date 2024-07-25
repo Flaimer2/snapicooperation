@@ -1,11 +1,21 @@
 package ru.snapix.snapicooperation.api.events.party
 
-import com.velocitypowered.api.proxy.Player
+import org.bukkit.event.Event
+import org.bukkit.event.HandlerList
+import ru.snapix.library.network.player.NetworkPlayer
 import ru.snapix.snapicooperation.api.Party
 
-data class PartyDisbandEvent(val player: Player, val party: Party, val reason: DisbandReason)
+class PartyDisbandEvent(val player: NetworkPlayer, val party: Party) : Event() {
+    override fun getHandlers(): HandlerList {
+        return HANDLERS
+    }
 
-enum class DisbandReason {
-    DISABLE_PLUGIN,
-    USER_DISBAND
+    companion object {
+        val HANDLERS = HandlerList()
+
+        @JvmStatic
+        fun getHandlerList(): HandlerList {
+            return HANDLERS
+        }
+    }
 }

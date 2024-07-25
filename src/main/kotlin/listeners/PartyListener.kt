@@ -1,104 +1,127 @@
 package ru.snapix.snapicooperation.listeners
 
-import com.velocitypowered.api.event.Subscribe
-import ru.snapix.library.message
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import ru.snapix.library.bukkit.utils.callEvent
 import ru.snapix.snapicooperation.api.events.party.*
-import ru.snapix.snapicooperation.placeholders
+import ru.snapix.snapicooperation.caches.Parties
 import ru.snapix.snapicooperation.settings.Settings
-import ru.snapix.snapicooperation.toPlayer
 
-class PartyListener {
+class PartyListener : Listener {
     val message get() = Settings.message.party()
 
-    @Subscribe
+    @EventHandler
+    fun removeInvite(event: PartyCreateEvent) {
+        val player = event.party.leader
+        Parties.values().filter { it.invitations.contains(player) }.forEach {
+            it.invitations.remove(player)
+            Parties.update(it)
+            callEvent(PartyResponseInvitationEvent(player, it, InvitationStatus.DECLINE))
+        }
+    }
+
+    @EventHandler
     fun onDisband(event: PartyDisbandEvent) {
         val party = event.party
-        when (event.reason) {
-            DisbandReason.DISABLE_PLUGIN -> {
-                party.leader.toPlayer().message(message.disband().disablePlugin())
-                party.players.mapNotNull { it.toPlayer() }.forEach { it.message(message.disband().disablePlugin(), *party.placeholders()) }
-            }
-
-            DisbandReason.USER_DISBAND -> {
-                party.leader.toPlayer().message(message.disband().leaderDisbandForLeader(), *party.placeholders())
-                party.players.mapNotNull { it.toPlayer() }.forEach { it.message(message.disband().leaderDisbandForMembers(), *party.placeholders()) }
-            }
-        }
+        party.leader.sendMessage(message.disband().leaderDisbandForLeader(), "party_leader" to party.leader.getName())
+        party.players.forEach { it.sendMessage(message.disband().leaderDisbandForMembers(), "party_leader" to party.leader.getName()) }
     }
 
-    @Subscribe
-    fun onCreateUser(event: PartyCreateUserEvent) {
+    @EventHandler
+    fun onAddUser(event: PartyAddUserEvent) {
         val party = event.party
-        val player = event.player
+        val player = event.newPlayer
 
-        party.leader.toPlayer().message(message.createUser().messageForMembers())
-        party.players.mapNotNull { it.toPlayer() }.filter { it != player }.forEach {
-            it.message(
+        party.leader.sendMessage(message.createUser().messageForMembers(), "name" to player.getName())
+        party.players.filter { it != player }.forEach {
+            it.sendMessage(
                 message.createUser().messageForMembers(),
-                *party.placeholders(),
-                "name" to player.username
+                "party_leader" to party.leader.getName(),
+                "name" to player.getName()
             )
         }
-        player.message(message.createUser().messageForAddedPlayer(), *party.placeholders(), "name" to player.username)
+        player.sendMessage(message.createUser().messageForAddedPlayer(), "party_leader" to party.leader.getName(), "name" to player.getName())
     }
 
-    @Subscribe
+    @EventHandler
     fun onRemoveUser(event: PartyRemoveUserEvent) {
         val party = event.party
-        val player = event.player
+        val player = event.removed
 
-        party.leader.toPlayer().message(message.removeUser().messageForMembers(),
-            *party.placeholders(),
-            "name" to player.username)
-        party.players.mapNotNull { it.toPlayer() }.filter { it != player }.forEach {
-            it.message(
-                message.removeUser().messageForMembers(),
-                *party.placeholders(),
-                "name" to player.username
-            )
+        fun sendMessageToParty(memberMessage: String?, removedMessage: String?) {
+            if (memberMessage != null) {
+                party.leader.sendMessage(
+                    memberMessage,
+                    "party_leader" to party.leader.getName(),
+                    "name" to player.getName()
+                )
+                party.players.filter { it != player }.forEach {
+                    it.sendMessage(
+                        memberMessage,
+                        "party_leader" to party.leader.getName(),
+                        "name" to player.getName()
+                    )
+                }
+            }
+            if (removedMessage != null) {
+                player.sendMessage(removedMessage, "party_leader" to party.leader.getName(), "name" to player.getName())
+            }
         }
-        player.message(message.removeUser().messageForRemovedPlayer(), *party.placeholders(), "name" to player.username)
+
+        when (event.reason) {
+            RemoveUserReason.USER_REMOVE -> sendMessageToParty(
+                message.removeUser().messageForMembers(),
+                message.removeUser().messageForRemovedPlayer()
+            )
+
+            RemoveUserReason.USER_LEAVE -> sendMessageToParty(
+                message.leave().messageForMembers(),
+                message.leave().messageForRemovedPlayer()
+            )
+
+            RemoveUserReason.PARTY_DISBAND -> {}
+        }
     }
 
-    @Subscribe
+    @EventHandler
     fun onChangeLeader(event: PartyChangeLeaderEvent) {
         val oldLeader = event.oldLeader
         val newLeader = event.newLeader
         val party = event.party
 
-        oldLeader.message(
+        oldLeader.sendMessage(
             message.changeLeader().messageForOldLeader(),
-            *party.placeholders(),
-            "name" to oldLeader.username
+            "party_leader" to party.leader.getName(),
+            "name" to oldLeader.getName()
         )
-        newLeader.message(
+        newLeader.sendMessage(
             message.changeLeader().messageForNewLeader(),
-            *party.placeholders(),
-            "name" to oldLeader.username
+            "party_leader" to party.leader.getName(),
+            "name" to oldLeader.getName()
         )
-        party.players.mapNotNull { it.toPlayer() }.filter { it != oldLeader && it != newLeader }.forEach {
-            it.message(
+        party.players.filter { it != oldLeader && it != newLeader }.forEach {
+            it.sendMessage(
                 message.changeLeader().messageForMembers(),
-                *party.placeholders(),
-                "name" to oldLeader.username
+                "party_leader" to party.leader.getName(),
+                "name" to oldLeader.getName()
             )
         }
     }
 
-    @Subscribe
+    @EventHandler
     fun onSendInvitation(event: PartySendInvitationEvent) {
         val party = event.party
-        val invited = event.player
+        val invited = event.receiver
 
-        party.leader.toPlayer().message(
+        party.leader.sendMessage(
             message.sendInvitation().messageForSender(),
-            *party.placeholders(),
-            "name" to invited.username
+            "party_leader" to party.leader.getName(),
+            "name" to invited.getName()
         )
-        invited.message(message.sendInvitation().messageForInvited(), *party.placeholders(), "name" to invited.username)
+        invited.sendMessage(message.sendInvitation().messageForInvited(), "party_leader" to party.leader.getName(), "name" to invited.getName())
     }
 
-    @Subscribe
+    @EventHandler
     fun onResponseInvitation(event: PartyResponseInvitationEvent) {
         val config = message.responseInvitation()
 
@@ -108,26 +131,26 @@ class PartyListener {
 
         when (event.status) {
             InvitationStatus.ACCEPT -> {
-                invited.message(config.accept().messageForInvited(), *party.placeholders(), "name" to invited.username)
+                invited.sendMessage(config.accept().messageForInvited(), "party_leader" to party.leader.getName(), "name" to invited.getName())
             }
 
             InvitationStatus.DECLINE -> {
-                sender.toPlayer().message(config.decline().messageForSender(), *party.placeholders(), "name" to invited.username)
-                invited.message(config.decline().messageForInvited(), *party.placeholders(), "name" to invited.username)
+                sender.sendMessage(config.decline().messageForSender(), "party_leader" to party.leader.getName(), "name" to invited.getName())
+                invited.sendMessage(config.decline().messageForInvited(), "party_leader" to party.leader.getName(), "name" to invited.getName())
             }
 
             InvitationStatus.IGNORE -> {
-                sender.toPlayer().message(config.ignore().messageForSender(), *party.placeholders(), "name" to invited.username)
-                invited.message(config.ignore().messageForInvited(), *party.placeholders(), "name" to invited.username)
+                sender.sendMessage(config.ignore().messageForSender(), "party_leader" to party.leader.getName(), "name" to invited.getName())
+                invited.sendMessage(config.ignore().messageForInvited(), "party_leader" to party.leader.getName(), "name" to invited.getName())
             }
 
             InvitationStatus.REMOVE_LEADER -> {
-                sender.toPlayer().message(
+                sender.sendMessage(
                     config.removeLeader().messageForSender(),
-                    *party.placeholders(),
-                    "name" to invited.username
+                    "party_leader" to party.leader.getName(),
+                    "name" to invited.getName()
                 )
-                invited.message(config.removeLeader().messageForInvited(), *party.placeholders(), "name" to invited.username)
+                invited.sendMessage(config.removeLeader().messageForInvited(), "party_leader" to party.leader.getName(), "name" to invited.getName())
             }
         }
     }

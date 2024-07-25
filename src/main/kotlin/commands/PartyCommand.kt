@@ -1,26 +1,21 @@
 package ru.snapix.snapicooperation.commands
 
-import com.velocitypowered.api.command.CommandSource
-import com.velocitypowered.api.proxy.Player
-import ru.snapix.library.NetworkPlayer
-import ru.snapix.library.callEvent
+import me.clip.placeholderapi.PlaceholderAPI
+import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
+import ru.snapix.library.SnapiLibrary
+import ru.snapix.library.bukkit.utils.sendMessage
 import ru.snapix.library.libs.commands.BaseCommand
 import ru.snapix.library.libs.commands.annotation.CatchUnknown
 import ru.snapix.library.libs.commands.annotation.CommandAlias
 import ru.snapix.library.libs.commands.annotation.Default
 import ru.snapix.library.libs.commands.annotation.Subcommand
-import ru.snapix.library.message
-import ru.snapix.library.toPlayer
+import ru.snapix.library.utils.message
 import ru.snapix.library.utils.stripColor
-import ru.snapix.snapicooperation.api.Party
-import ru.snapix.snapicooperation.api.events.party.DisbandReason
-import ru.snapix.snapicooperation.api.events.party.PartyDisbandEvent
-import ru.snapix.snapicooperation.chatMessage
+import ru.snapix.library.utils.translateAlternateColorCodes
 import ru.snapix.snapicooperation.PanelStorage
-import ru.snapix.snapicooperation.placeholders
-import ru.snapix.snapicooperation.plugin
+import ru.snapix.snapicooperation.api.Party
 import ru.snapix.snapicooperation.settings.Settings
-import ru.snapix.snapicooperation.toPlayer
 
 @CommandAlias("%party_command_main")
 class PartyCommand : BaseCommand() {
@@ -28,7 +23,8 @@ class PartyCommand : BaseCommand() {
 
     @Default
     fun default(player: Player) {
-        val party = Party[player]
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        val party = Party[networkPlayer]
         if (party == null) {
             PanelStorage.nullPartyMenu(player)
             return
@@ -36,32 +32,34 @@ class PartyCommand : BaseCommand() {
         PanelStorage.defaultPartyMenu(player)
     }
 
+
     @CatchUnknown
     @Subcommand("%party_command_help")
-    fun help(sender: CommandSource) {
-        sender.message(config.help())
+    fun help(sender: CommandSender) {
+        sender.sendMessage(config.help().map { translateAlternateColorCodes(it) }.toTypedArray())
     }
 
     @Subcommand("%party_command_disband")
     fun disband(player: Player) {
-        val party = Party[player]
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        val party = Party[networkPlayer]
         if (party == null) {
             player.message(config.disband().notInParty())
             return
         }
-        if (!party.isLeader(player)) {
-            player.message(config.disband().onlyLeave(), *party.placeholders())
+        if (!party.isLeader(networkPlayer)) {
+            player.message(config.disband().onlyLeave(), "party_leader" to party.leader.getName())
             return
         }
-        plugin.callEvent(PartyDisbandEvent(player, party, DisbandReason.USER_DISBAND))
         party.remove()
     }
 
     @Subcommand("%party_command_invite")
     fun invite(player: Player, args: Array<String>) {
-        val party = Party[player] ?: Party.create(player)
-        if (!party.isLeader(player)) {
-            player.message(config.invite().notLeader())
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        val party = Party[networkPlayer] ?: Party.create(player)
+        if (!party.isLeader(networkPlayer)) {
+            player.message(config.invite().notLeader(), "party_leader" to party.leader.getName())
             return
         }
 
@@ -71,64 +69,74 @@ class PartyCommand : BaseCommand() {
         }
         val invited = args[0]
 
-        if (invited.equals(player.username, ignoreCase = true)) {
-            player.message(config.invite().errorYourself())
+        if (invited.equals(player.name, ignoreCase = true)) {
+            player.message(config.invite().errorYourself(), "party_leader" to party.leader.getName())
             return
         }
 
-        val ntInvited = NetworkPlayer(invited)
-        if (!ntInvited.isExist()) {
-            player.message(config.invite().notFound(), "name" to invited)
+        val ntInvited = SnapiLibrary.getPlayer(invited)
+        if (!ntInvited.hasPlayedBefore()) {
+            player.message(config.invite().notFound(), "name" to ntInvited.getName(), "party_leader" to party.leader.getName())
             return
         }
 
-        val playerInvited = ntInvited.toPlayer()
-        if (playerInvited == null) {
-            player.message(config.invite().offline(), "name" to ntInvited.name())
+        if (!ntInvited.isOnline()) {
+            player.message(config.invite().offline(), "name" to ntInvited.getName(), "party_leader" to party.leader.getName())
             return
         }
 
-        if (party.inParty(playerInvited)) {
-            player.message(config.invite().alreadyInYouParty(), "name" to ntInvited.name())
+        if (party.inParty(ntInvited)) {
+            player.message(config.invite().alreadyInYouParty(), "name" to ntInvited.getName(), "party_leader" to party.leader.getName())
             return
         }
 
-        val partyInvited = Party[playerInvited]
+        val partyInvited = Party[ntInvited]
 
         if (partyInvited != null) {
-            if (partyInvited.isLeader(playerInvited)) {
+            if (partyInvited.isLeader(ntInvited)) {
                 player.message(
                     config.invite().alreadyInPartyLeader(),
-                    "name" to ntInvited.name(),
-                    *partyInvited.placeholders()
+                    "name" to ntInvited.getName(),
+                    "party_leader" to partyInvited.leader
                 )
             } else {
                 player.message(
                     config.invite().alreadyInParty(),
-                    "name" to ntInvited.name(),
-                    *partyInvited.placeholders()
+                    "name" to ntInvited.getName(),
+                    "party_leader" to partyInvited.leader
                 )
             }
             return
         }
 
-        if (party.invitations.contains(ntInvited.name())) {
-            player.message(config.invite().alreadyInvite(), "name" to ntInvited.name(), *party.placeholders())
+        if (party.invitations.contains(ntInvited)) {
+            player.message(
+                config.invite().alreadyInvite(),
+                "name" to ntInvited.getName(),
+                "party_leader" to party.leader
+            )
             return
         }
 
         if (party.size >= party.maxSize) {
-            player.message(config.invite().fullParty(), "name" to ntInvited.name(), *party.placeholders())
+            player.message(
+                config.invite().fullParty(),
+                "name" to ntInvited.getName(),
+                "party_leader" to party.leader,
+                "size" to party.size,
+                "max_size" to party.maxSize
+            )
             return
         }
 
-        party.createInvitation(playerInvited)
+        party.createInvitation(ntInvited)
     }
 
     @Subcommand("%party_command_accept")
     fun accept(player: Player, args: Array<String>) {
-        if (Party[player] != null) {
-            player.message(config.accept().alreadyInParty(), *Party[player].placeholders())
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        if (Party[networkPlayer] != null) {
+            player.message(config.accept().alreadyInParty(), "party_leader" to Party[networkPlayer]!!.leader.getName())
             return
         }
 
@@ -138,41 +146,45 @@ class PartyCommand : BaseCommand() {
         }
         val inviter = args[0]
 
-        if (inviter.equals(player.username, ignoreCase = true)) {
+        if (inviter.equals(player.name, ignoreCase = true)) {
             player.message(config.accept().errorYourself())
             return
         }
 
-        val ntInviter = NetworkPlayer(inviter)
-        if (!ntInviter.isExist()) {
-            player.message(config.accept().notFound(), "name" to inviter)
+        val ntInviter = SnapiLibrary.getPlayer(inviter)
+        if (!ntInviter.hasPlayedBefore()) {
+            player.message(config.accept().notFound(), "name" to ntInviter.getName())
             return
         }
 
-        val playerInviter = ntInviter.toPlayer()
-        if (playerInviter == null) {
-            player.message(config.accept().offline(), "name" to ntInviter.name())
+        if (!ntInviter.isOnline()) {
+            player.message(config.accept().offline(), "name" to ntInviter.getName())
             return
         }
 
-        val party = Party[playerInviter]
+        val party = Party[ntInviter]
         if (party == null) {
-            player.message(config.accept().notFoundParty(), "name" to ntInviter.name())
+            player.message(config.accept().notFoundParty(), "name" to ntInviter.getName())
             return
         }
 
-        if (!party.isLeader(playerInviter)) {
-            player.message(config.accept().notLeader(), "name" to ntInviter.name(), *party.placeholders())
+        if (!party.isLeader(ntInviter)) {
+            player.message(
+                config.accept().notLeader(),
+                "name" to ntInviter.getName(),
+                "party_leader" to party.leader.getName()
+            )
             return
         }
 
-        party.accept(player)
+        party.accept(networkPlayer)
     }
 
     @Subcommand("%party_command_deny")
     fun deny(player: Player, args: Array<String>) {
-        if (Party[player] != null) {
-            player.message(config.deny().alreadyInParty(), *Party[player].placeholders())
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        if (Party[networkPlayer] != null) {
+            player.message(config.deny().alreadyInParty(), "party_leader" to Party[networkPlayer]!!.leader.getName())
             return
         }
 
@@ -182,84 +194,97 @@ class PartyCommand : BaseCommand() {
         }
         val inviter = args[0]
 
-        if (inviter.equals(player.username, ignoreCase = true)) {
+        if (inviter.equals(player.name, ignoreCase = true)) {
             player.message(config.deny().errorYourself())
             return
         }
 
-        val ntInviter = NetworkPlayer(inviter)
-        if (!ntInviter.isExist()) {
-            player.message(config.deny().notFound(), "name" to inviter)
+        val ntInviter = SnapiLibrary.getPlayer(inviter)
+        if (!ntInviter.hasPlayedBefore()) {
+            player.message(config.deny().notFound(), "name" to ntInviter.getName())
             return
         }
 
-        val playerInviter = ntInviter.toPlayer()
-        if (playerInviter == null) {
-            player.message(config.deny().offline(), "name" to ntInviter.name())
+        if (!ntInviter.isOnline()) {
+            player.message(config.deny().offline(), "name" to ntInviter.getName())
             return
         }
 
-        val party = Party[playerInviter]
+        val party = Party[ntInviter]
         if (party == null) {
-            player.message(config.deny().notFoundParty(), "name" to ntInviter.name())
+            player.message(config.deny().notFoundParty(), "name" to ntInviter.getName())
             return
         }
 
-        if (!party.isLeader(playerInviter)) {
-            player.message(config.deny().notLeader(), "name" to ntInviter.name(), *party.placeholders())
+        if (!party.isLeader(ntInviter)) {
+            player.message(
+                config.deny().notLeader(),
+                "name" to ntInviter.getName(),
+                "party_leader" to party.leader.getName()
+            )
             return
         }
 
-        party.decline(player)
+        party.decline(networkPlayer)
     }
 
     @Subcommand("%party_command_remove")
     fun remove(player: Player, args: Array<String>) {
-        val party = Party[player]
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        val party = Party[networkPlayer]
         if (party == null) {
             player.message(config.remove().notParty())
             return
         }
 
-        if (!party.isLeader(player)) {
-            player.message(config.remove().notLeader(), *party.placeholders())
+        if (!party.isLeader(networkPlayer)) {
+            player.message(config.remove().notLeader(), "party_leader" to party.leader.getName())
             return
         }
 
         if (args.isEmpty()) {
-            player.message(config.remove().use(), *party.placeholders())
+            player.message(config.remove().use(), "party_leader" to party.leader.getName())
             return
         }
         val removed = args[0]
 
-        if (removed.equals(player.username, ignoreCase = true)) {
-            player.message(config.remove().errorYourself(), *party.placeholders())
+        if (removed.equals(player.name, ignoreCase = true)) {
+            player.message(config.remove().errorYourself(), "party_leader" to party.leader.getName())
             return
         }
 
-        val ntRemoved = NetworkPlayer(removed)
-        if (!ntRemoved.isExist()) {
-            player.message(config.remove().notFound(), "name" to removed, *party.placeholders())
+        val ntRemoved = SnapiLibrary.getPlayer(player.name)
+        if (!ntRemoved.hasPlayedBefore()) {
+            player.message(config.remove().notFound(), "name" to removed, "party_leader" to party.leader.getName())
             return
         }
 
-        val playerRemoved = ntRemoved.toPlayer()
-        if (playerRemoved == null) {
-            player.message(config.remove().offline(), "name" to ntRemoved.name(), *party.placeholders())
+        if (!ntRemoved.isOnline()) {
+            player.message(
+                config.remove().offline(),
+                "name" to ntRemoved.getName(),
+                "party_leader" to party.leader.getName()
+            )
             return
         }
 
-        if (party.inParty(player)) {
-            player.message(config.remove().notInParty(), "name" to ntRemoved.name(), *party.placeholders())
+        if (party.inParty(ntRemoved)) {
+            player.message(
+                config.remove().notInParty(),
+                "name" to ntRemoved.getName(),
+                "party_leader" to party.leader.getName()
+            )
             return
         }
 
-        party.removePlayer(playerRemoved)
+        party.removePlayer(ntRemoved)
     }
 
     @Subcommand("%party_command_chat")
     fun chat(player: Player, args: Array<String>) {
-        val party = Party[player]
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        val party = Party[networkPlayer]
+
         if (party == null) {
             player.message(config.chat().notParty())
             return
@@ -270,80 +295,83 @@ class PartyCommand : BaseCommand() {
             return
         }
 
-        val ntPlayer = NetworkPlayer(player.username)
-
-        val prefix = ntPlayer.prefix()
-        val suffix = ntPlayer.suffix()
         val message = stripColor(args.joinToString(" "))
 
         var format = Settings.config.chatFormat()
 
-        format = format.replace("%player%", player.username)
-        format = format.replace("%prefix%", prefix ?: "")
-        format = format.replace("%suffix%", if (suffix == null) "" else " $suffix")
+        format = PlaceholderAPI.setPlaceholders(player, format)
         format = format.replace("%message%", message)
 
-        party.leader.toPlayer().chatMessage(player, format)
-        party.players.mapNotNull { it.toPlayer() }.forEach { it.chatMessage(player, format) }
+        val receivers = listOf(party.leader, *party.players.toTypedArray())
+        receivers.sendMessage(format)
     }
 
     @Subcommand("%party_command_leave")
     fun leave(player: Player) {
-        val party = Party[player]
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        val party = Party[networkPlayer]
         if (party == null) {
             player.message(config.leave().notParty())
             return
         }
 
-        if (party.isLeader(player)) {
-            player.message(config.leave().leader(), *party.placeholders())
+        if (party.isLeader(networkPlayer)) {
+            player.message(config.leave().leader())
             return
         }
 
-        party.removePlayer(player)
+        party.leave(networkPlayer)
     }
 
     @Subcommand("%party_command_lead")
     fun lead(player: Player, args: Array<String>) {
-        val party = Party[player]
+        val networkPlayer = SnapiLibrary.getPlayer(player.name)
+        val party = Party[networkPlayer]
         if (party == null) {
             player.message(config.lead().notParty())
             return
         }
 
-        if (!party.isLeader(player)) {
-            player.message(config.lead().notLeader(), *party.placeholders())
+        if (!party.isLeader(networkPlayer)) {
+            player.message(config.lead().notLeader(), "party_leader" to party.leader.getName())
             return
         }
 
         if (args.isEmpty()) {
-            player.message(config.lead().use(), *party.placeholders())
+            player.message(config.lead().use(), "party_leader" to party.leader.getName())
             return
         }
         val leader = args[0]
 
-        if (leader.equals(player.username, ignoreCase = true)) {
-            player.message(config.lead().errorYourself(), *party.placeholders())
+        if (leader.equals(player.name, ignoreCase = true)) {
+            player.message(config.lead().errorYourself(), "party_leader" to party.leader.getName())
             return
         }
 
-        val ntLeader = NetworkPlayer(leader)
-        if (!ntLeader.isExist()) {
-            player.message(config.lead().notFound(), "name" to leader, *party.placeholders())
+        val ntLeader = SnapiLibrary.getPlayer(leader)
+        if (!ntLeader.hasPlayedBefore()) {
+            player.message(config.lead().notFound(), "name" to leader, "party_leader" to party.leader.getName())
             return
         }
 
-        val playerLeader = ntLeader.toPlayer()
-        if (playerLeader == null) {
-            player.message(config.lead().offline(), "name" to ntLeader.name(), *party.placeholders())
+        if (!ntLeader.isOnline()) {
+            player.message(
+                config.lead().offline(),
+                "name" to ntLeader.getName(),
+                "party_leader" to party.leader.getName()
+            )
             return
         }
 
-        if (party.inParty(player)) {
-            player.message(config.lead().notInParty(), "name" to ntLeader.name(), *party.placeholders())
+        if (party.inParty(ntLeader)) {
+            player.message(
+                config.lead().notInParty(),
+                "name" to ntLeader.getName(),
+                "party_leader" to party.leader.getName()
+            )
             return
         }
 
-        party.changeLeader(playerLeader)
+        party.changeLeader(ntLeader)
     }
 }

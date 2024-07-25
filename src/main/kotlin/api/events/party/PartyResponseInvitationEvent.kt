@@ -1,9 +1,25 @@
 package ru.snapix.snapicooperation.api.events.party
 
-import com.velocitypowered.api.proxy.Player
+import org.bukkit.event.Event
+import org.bukkit.event.HandlerList
+import ru.snapix.library.network.player.NetworkPlayer
 import ru.snapix.snapicooperation.api.Party
 
-data class PartyResponseInvitationEvent(val player: Player, val party: Party, val status: InvitationStatus)
+class PartyResponseInvitationEvent(val player: NetworkPlayer, val party: Party, val status: InvitationStatus) :
+    Event() {
+    override fun getHandlers(): HandlerList {
+        return HANDLERS
+    }
+
+    companion object {
+        val HANDLERS = HandlerList()
+
+        @JvmStatic
+        fun getHandlerList(): HandlerList {
+            return HANDLERS
+        }
+    }
+}
 
 enum class InvitationStatus {
     ACCEPT,

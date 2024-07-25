@@ -2,22 +2,27 @@
 kotlin = "2.0.0"
 shadow = "7.1.2"
 serialization = "1.7.1"
-library = "1.11.2"
-balancer = "1.4"
-velocity = "3.2.0-SNAPSHOT"
-protocolize = "2.3.3"
+snapilibrary = "2.0.0"
+paper-api = "1.12.2-R0.1-SNAPSHOT"
+placeholderapi = "2.11.6"
+plugin-yml-bukkit = "0.6.0"
 luckperms = "5.4"
+balancer = "1.5"
+velocity = "3.2.0-SNAPSHOT"
 
 [libraries]
-velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
-library = { module = "ru.snapix:snapilibrary-velocity", version.ref = "library" }
+velocityapi = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
+snapilibrary-bukkit = { module = "ru.snapix:snapilibrary-bukkit", version.ref = "snapilibrary" }
+snapilibrary-velocity = { module = "ru.snapix:snapilibrary-velocity", version.ref = "snapilibrary" }
 serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
-protocolize = { module = "dev.simplix:protocolize-api", version.ref = "protocolize" }
-balancer = { module = "ru.snapix:snapilibrary-velocity", version.ref = "balancer" }
+bukkit = { module = "com.destroystokyo.paper:paper-api", version.ref = "paper-api" }
+placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
 luckperms = { module = "net.luckperms:api", version.ref = "luckperms" }
+balancer = { module = "ru.snapix:snapibalancer-bukkit", version.ref = "balancer" }
 
 [plugins]
 jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+plugin-yml-bukkit = { id = "net.minecrell.plugin-yml.bukkit", version.ref = "plugin-yml-bukkit" }

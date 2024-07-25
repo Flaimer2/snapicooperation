@@ -52,6 +52,10 @@ interface MainConfig {
         @DefaultString("lead")
         fun leadCommand(): String
 
+        @ConfKey("help-friend-command")
+        @DefaultString("help")
+        fun helpFriendCommand(): String
+
         @ConfKey("add-friend-command")
         @DefaultString("add")
         fun addFriendCommand(): String
@@ -93,6 +97,6 @@ interface MainConfig {
     fun invitationDelay(): Int
 
     @ConfKey("chat-format")
-    @DefaultString("%prefix%%player%%suffix% > %message%")
+    @DefaultString("%vault_prefix%%player_name%%vault_suffix% > %message%")
     fun chatFormat(): String
 }

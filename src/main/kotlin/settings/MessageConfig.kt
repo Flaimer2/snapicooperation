@@ -13,10 +13,6 @@ interface MessageConfig {
         @ConfKey("disband")
         fun disband(): Disband
         interface Disband {
-            @ConfKey("disable-plugin")
-            @DefaultString("Группа удалена из-за выключение плагина")
-            fun disablePlugin(): String
-
             @ConfKey("leader-disband-for-leader")
             @DefaultString("Вы удалили группу")
             fun leaderDisbandForLeader(): String
@@ -45,6 +41,19 @@ interface MessageConfig {
         interface RemoveUser {
             @ConfKey("message-for-members")
             @DefaultString("Игрока %name% был удален из группу")
+            fun messageForMembers(): String
+
+            @ConfKey("message-for-removed-player")
+            @DefaultString("Вас удалили из группы %party_leader%")
+            fun messageForRemovedPlayer(): String
+        }
+
+        @SubSection
+        @ConfKey("leave-user")
+        fun leave(): LeaveUser
+        interface LeaveUser {
+            @ConfKey("message-for-members")
+            @DefaultString("Игрока %name% вышел из группы")
             fun messageForMembers(): String
 
             @ConfKey("message-for-removed-player")
@@ -344,6 +353,7 @@ interface MessageConfig {
             }
         }
     }
+
     @SubSection
     fun friend(): Friend
     interface Friend {
@@ -457,13 +467,91 @@ interface MessageConfig {
                 @DefaultString("Игрок %name% не найден")
                 fun notFound(): String
 
-                @DefaultString("Игрок %name% оффлайн")
-                fun offline(): String
-
                 @ConfKey("not-in-friend")
                 @DefaultString("Игрок %name% не в ваших друзьях")
                 fun notInFriend(): String
             }
+        }
+
+        @SubSection
+        @ConfKey("send-invitation")
+        fun sendInvitation(): SendInvitation
+        interface SendInvitation {
+            @ConfKey("message-for-sender")
+            @DefaultString("Вы отправили приглашение игроку %receiver%")
+            fun messageForSender(): String
+
+            @ConfKey("message-for-invited")
+            @DefaultString("Вы получили приглашение от игрока %sender%. Сделать кнопки через minimessage!!!")
+            fun messageForInvited(): String
+        }
+
+        @SubSection
+        @ConfKey("response-invitation")
+        fun responseInvitation(): ResponseInvitation
+        interface ResponseInvitation {
+            @SubSection
+            fun accept(): Accept
+            interface Accept {
+                @ConfKey("message-for-invited")
+                @DefaultString("Вы приняли приглашение от игрока %sender%")
+                fun messageForInvited(): String
+            }
+
+            @SubSection
+            fun decline(): Decline
+            interface Decline {
+                @ConfKey("message-for-sender")
+                @DefaultString("%receiver% отклонил ваше приглашение в группу %sender%")
+                fun messageForSender(): String
+
+                @ConfKey("message-for-invited")
+                @DefaultString("Вы отклонили приглашение от игрока %sender%")
+                fun messageForInvited(): String
+            }
+
+            @SubSection
+            fun ignore(): Ignore
+            interface Ignore {
+                @ConfKey("message-for-sender")
+                @DefaultString("%receiver% проигнорировал ваше приглашение в группу %sender%")
+                fun messageForSender(): String
+
+                @ConfKey("message-for-invited")
+                @DefaultString("Вы проигнорировали приглашение от игрока %sender%")
+                fun messageForInvited(): String
+            }
+
+            @SubSection
+            @ConfKey("remove-by-user")
+            fun removeByUser(): RemoveLeader
+            interface RemoveLeader {
+                @ConfKey("message-for-sender")
+                @DefaultString("Вы убрали приглашение игроку %receiver%")
+                fun messageForSender(): String
+
+                @ConfKey("message-for-invited")
+                @DefaultString("%sender% удалил ваше приглашение")
+                fun messageForInvited(): String
+            }
+        }
+
+        @SubSection
+        @ConfKey("remove-friend")
+        fun removeFriend(): RemoveUser
+        interface RemoveUser {
+            @ConfKey("message-for-sender")
+            @DefaultString("Вы удалили %receiver%")
+            fun messageForSender(): String
+        }
+
+        @SubSection
+        @ConfKey("create-user")
+        fun createUser(): CreateUser
+        interface CreateUser {
+            @ConfKey("message-for-sender")
+            @DefaultString("Вы теперь дружите с %receiver%")
+            fun messageForSender(): String
         }
     }
 }
