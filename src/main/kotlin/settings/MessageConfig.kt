@@ -392,6 +392,10 @@ interface MessageConfig {
                 @DefaultString("%name% уже вас пригласил в друзья. Ответьте на его приглашение.")
                 fun alreadyInviteByOther(): String
 
+                @ConfKey("limit-invite-friend")
+                @DefaultString("Вы не можете пригласить игрока, так как вы пригласили больше 4 игроков. Нужно подождать ответ на ваши другие приглашения")
+                fun limitInviteFriend(): String
+
                 @ConfKey("full-friend")
                 @DefaultString("У вас максимальное количество друзей %max_size%")
                 fun fullFriend(): String

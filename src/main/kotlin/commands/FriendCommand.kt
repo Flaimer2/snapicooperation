@@ -4,10 +4,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import ru.snapix.library.SnapiLibrary
 import ru.snapix.library.libs.commands.BaseCommand
-import ru.snapix.library.libs.commands.annotation.CatchUnknown
-import ru.snapix.library.libs.commands.annotation.CommandAlias
-import ru.snapix.library.libs.commands.annotation.Default
-import ru.snapix.library.libs.commands.annotation.Subcommand
+import ru.snapix.library.libs.commands.annotation.*
 import ru.snapix.library.network.player.OfflineNetworkPlayer
 import ru.snapix.library.utils.message
 import ru.snapix.library.utils.translateAlternateColorCodes
@@ -20,17 +17,20 @@ class FriendCommand : BaseCommand() {
     private val config get() = Settings.message.friend().commands()
 
     @Default
+    @CommandCompletion("@nothing")
     fun default(player: Player) {
         PanelStorage.friendMenu(player)
     }
 
     @CatchUnknown
     @Subcommand("%friend_command_help")
+    @CommandCompletion("@nothing")
     fun help(sender: CommandSender) {
         sender.sendMessage(config.help().map { translateAlternateColorCodes(it) }.toTypedArray())
     }
 
     @Subcommand("%friend_command_add")
+    @CommandCompletion("@player_without_friend")
     fun add(player: Player, args: Array<String>) {
         val user = User[player]
 
@@ -73,6 +73,11 @@ class FriendCommand : BaseCommand() {
             return
         }
 
+        if (user.invitations.size >= Settings.config.limitInviteFriend()) {
+            player.message(config.add().limitInviteFriend())
+            return
+        }
+
         if (user.friends.size + user.invitations.size >= user.maxSize) {
             player.message(
                 config.add().fullFriend(),
@@ -97,6 +102,7 @@ class FriendCommand : BaseCommand() {
     }
 
     @Subcommand("%friend_command_accept")
+    @CommandCompletion("@friend_invite")
     fun accept(player: Player, args: Array<String>) {
         val user = User[player]
 
@@ -133,6 +139,7 @@ class FriendCommand : BaseCommand() {
     }
 
     @Subcommand("%friend_command_decline")
+    @CommandCompletion("@friend_invite")
     fun deny(player: Player, args: Array<String>) {
         if (args.isEmpty()) {
             player.message(config.deny().use())
@@ -167,6 +174,7 @@ class FriendCommand : BaseCommand() {
     }
 
     @Subcommand("%friend_command_remove")
+    @CommandCompletion("@player_in_friend")
     fun remove(player: Player, args: Array<String>) {
         val user = User[player]
 

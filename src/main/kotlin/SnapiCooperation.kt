@@ -20,8 +20,8 @@ class SnapiCooperation : JavaPlugin() {
     }
 
     override fun onEnable() {
+        FriendDatabase.load()
         if (SnapiLibraryBukkit.instance.serverType == ServerType.LOBBY) {
-            FriendDatabase.load()
             FriendDatabase.users().forEach { Friends.update(it) }
         }
         server.pluginManager.registerEvents(ConnectionListener(), this)

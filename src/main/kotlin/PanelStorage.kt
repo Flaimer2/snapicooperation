@@ -12,7 +12,6 @@ import ru.snapix.library.bukkit.panel.nextPage
 import ru.snapix.library.bukkit.panel.prevPage
 import ru.snapix.library.network.player.NetworkPlayer
 import ru.snapix.library.network.player.OfflineNetworkPlayer
-import ru.snapix.library.network.player.OnlineNetworkPlayer
 import ru.snapix.library.utils.message
 import ru.snapix.library.utils.toDate
 import ru.snapix.snapicooperation.api.CooperationApi
@@ -21,15 +20,15 @@ import ru.snapix.snapicooperation.api.User
 import kotlin.time.Duration.Companion.seconds
 
 object PanelStorage {
-    fun partyMenu(player: Player) {
+    fun partyMenu(player: Player, backProfile: Boolean = false) {
         if (Party[player.name] == null) {
-            nullPartyMenu(player)
+            nullPartyMenu(player, backProfile)
         } else {
-            defaultPartyMenu(player)
+            defaultPartyMenu(player, backProfile)
         }
     }
 
-    fun nullPartyMenu(player: Player) {
+    fun nullPartyMenu(player: Player, backProfile: Boolean = false) {
         panel(player) {
             title = "Создать группу"
             layout {
@@ -38,7 +37,7 @@ object PanelStorage {
                 -"    G    "
                 -"         "
                 -"         "
-                -"  O   I  "
+                -"  O B I  "
             }
             items {
                 'G' {
@@ -65,8 +64,8 @@ object PanelStorage {
                         -"&fВы можете пригласить любого"
                         -"&fигрока, для игры вместе!"
                         -""
-                        -"&fОнлайн на сервере: &a${SnapiLibrary.getOnlinePlayers().size}"
                         -"&fОнлайн друзей: &a${User[player.name].friends.size}"
+                        -"&fОнлайн на сервере: &a${SnapiLibrary.getOnlinePlayers().size}"
                     }
                 }
                 'I' {
@@ -78,11 +77,19 @@ object PanelStorage {
                         -"&fсовместной игры на сервере!"
                     }
                 }
+                'B' {
+                    name = "&aВернуться назад"
+                    material = Material.ARROW
+                    condition { backProfile }
+                    actions {
+                        ru.snapix.profile.PanelStorage.profile(player)
+                    }
+                }
             }
         }
     }
 
-    fun defaultPartyMenu(player: Player) {
+    fun defaultPartyMenu(player: Player, backProfile: Boolean = false) {
         generatorPanel<NetworkPlayer?>(player) {
             title = "Группа"
             update = 1.seconds
@@ -93,7 +100,7 @@ object PanelStorage {
                 -"FFFFFFFFF"
                 -"F F F F F"
                 -"FFFFFFFFF"
-                -"FFPFFFDFF"
+                -"FFPFBFDFF"
             }
 
             generatorSource {
@@ -130,7 +137,7 @@ object PanelStorage {
                                 "&aНажмите, чтобы открыть профиль"
                             ),
                             clickAction = {
-                                Bukkit.dispatchCommand(player, "profile ${it.getName()}")
+                                ru.snapix.profile.PanelStorage.otherProfile(player, it, backParty = true)
                             }
                         )
                     } else if (party.inParty(it)) {
@@ -146,7 +153,7 @@ object PanelStorage {
                             clickAction = {
                                 if (party.isLeader(player.name)) {
                                     if (type == ClickType.LEFT || type == ClickType.SHIFT_LEFT) {
-                                        Bukkit.dispatchCommand(player, "profile ${it.getName()}")
+                                        ru.snapix.profile.PanelStorage.otherProfile(player, it, backParty = true)
                                     }
                                     if (type == ClickType.MIDDLE) {
                                         party.changeLeader(it)
@@ -155,7 +162,7 @@ object PanelStorage {
                                         party.removePlayer(it)
                                     }
                                 } else {
-                                    Bukkit.dispatchCommand(player, "profile ${it.getName()}")
+                                    ru.snapix.profile.PanelStorage.otherProfile(player, it, backParty = true)
                                 }
                             }
                         )
@@ -243,8 +250,16 @@ object PanelStorage {
                     material = Material.PAPER
                     lore {
                         -""
-                        -"&fОнлайн на сервере: &a${SnapiLibrary.getOnlinePlayers().size}"
                         -"&fОнлайн друзей: &a${User[player.name].friends.size}"
+                        -"&fОнлайн на сервере: &a${SnapiLibrary.getOnlinePlayers().size}"
+                    }
+                }
+                'B' {
+                    name = "&aВернуться назад"
+                    material = Material.ARROW
+                    condition { backProfile }
+                    actions {
+                        ru.snapix.profile.PanelStorage.profile(player)
                     }
                 }
             }
@@ -262,7 +277,6 @@ object PanelStorage {
             title = "Список игроков"
             update = 1.seconds
 
-
             generatorSource { CooperationApi.playerWithoutParty().toList() }
             generatorOutput = {
                 Item(
@@ -275,8 +289,7 @@ object PanelStorage {
                         "&aНажмите, чтобы пригласить",
                     ),
                     clickAction = {
-                        val party = Party[player.name] ?: return@Item
-                        party.createInvitation(it)
+                        Bukkit.dispatchCommand(player, "party invite ${it.getName()}")
                         defaultPartyMenu(player)
                     }
                 )
@@ -326,26 +339,104 @@ object PanelStorage {
         }
     }
 
-    fun friendMenu(player: Player) {
-        generatorPanel<User>(player) {
+    fun friendMenu(player: Player, backProfile: Boolean = false) {
+        generatorPanel<User?>(player) {
             title = "Друзья"
+            update = 1.seconds
 
             layout {
                 -"#########"
                 -"#       #"
                 -"#       #"
+                -"#       #"
                 -"#########"
-                -"P# ### #N"
+                -"P#O#B#A#N"
             }
 
-            generatorSource { User[player].friends.map { User[it] } }
-            generatorOutput = {
-                Item(
-                    name = "&a${it.name}",
-                    head = it.name,
-                )
+            generatorSource {
+                val friends: MutableList<String> = User[player].friends.toMutableList()
+                if (friends.isEmpty()) {
+                    val list = arrayOfNulls<String>(10).map { it as User? }.toMutableList()
+                    list.add(User[player])
+                    list
+                } else {
+                    friends.map { User[it] }.sortedWith(compareBy<User> { OfflineNetworkPlayer(it.name).isOnline() }.thenBy { it.name })
+                }
             }
-            comparator = compareBy<User> { OfflineNetworkPlayer(it.name).isOnline() }.thenBy { it.name }
+            generatorOutput = {
+                if (it == null) {
+                    Item()
+                } else if (it.name.equals(player.name, ignoreCase = true)) {
+                    Item(
+                        name = "&cНет друзей",
+                        material = Material.RED_STAINED_GLASS_PANE,
+                        lore = listOf(
+                            "&fВы можете добавить до",
+                            "&a${User[player].maxSize} &fдрузей! Так, вы не",
+                            "&fбудете терять с ними связь",
+                            "",
+                            "&fЧтобы добавить игрока в",
+                            "&fдрузья, нажмите на &a&l+&r &fвнизу",
+                        )
+                    )
+                } else {
+                    val networkPlayer = SnapiLibrary.getPlayer(it.name)
+                    if (networkPlayer.isOnline()) {
+                        Item(
+                            name = "&a${it.name}",
+                            head = it.name,
+                            lore = listOf(
+                                "",
+                                "&fСтатус: &aОнлайн",
+                                "&fСейчас находится: &a${networkPlayer.getCurrentServer()?.name ?: "Где-то в переходе..."}",
+                                "",
+                                "&aНажмите ЛКМ, чтобы добавить в группу",
+                                "&aНажмите СКМ, чтобы удалить из друзей",
+                                "&aНажмите ПКМ, чтобы открыть профиль",
+                            ),
+                            clickAction = {
+                                if (type == ClickType.LEFT) {
+                                    Bukkit.dispatchCommand(player, "party invite ${it.name}")
+                                }
+                                if (type == ClickType.MIDDLE) {
+                                    Bukkit.dispatchCommand(player, "friend remove ${it.name}")
+                                }
+                                if (type == ClickType.RIGHT) {
+                                    ru.snapix.profile.PanelStorage.otherProfile(
+                                        player,
+                                        SnapiLibrary.getPlayer(it.name),
+                                        backFriend = true
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        Item(
+                            name = "&7${it.name}",
+                            head = it.name,
+                            lore = listOf(
+                                "",
+                                "&fСтатус: &cОффлайн",
+                                "",
+                                "&cНажмите СКМ, чтобы удалить из друзей",
+                                "&cНажмите ПКМ, чтобы открыть профиль",
+                            ),
+                            clickAction = {
+                                if (type == ClickType.MIDDLE) {
+                                    Bukkit.dispatchCommand(player, "friend remove ${it.name}")
+                                }
+                                if (type == ClickType.RIGHT) {
+                                    ru.snapix.profile.PanelStorage.otherProfile(
+                                        player,
+                                        SnapiLibrary.getPlayer(it.name),
+                                        backFriend = true
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
 
             items {
                 '#' {
@@ -362,6 +453,106 @@ object PanelStorage {
                 'N' {
                     name = "&aСледующая страница"
                     material = Material.ARROW
+                    condition { nextPage() }
+                    actions {
+                        nextPage()
+                    }
+                }
+                'O' {
+                    name = "&aОнлайн игроков"
+                    material = Material.PAPER
+                    lore {
+                        -""
+                        -"&fОнлайн друзей: &a${if (User[player].friends.isEmpty()) "&cНет друзей" else "${User[player].friends.map { OfflineNetworkPlayer(it) }.filter { it.isOnline() }.size}/${User[player].friends.size}"}"
+                        -"&fОнлайн на сервере: &a${SnapiLibrary.getOnlinePlayers().size}"
+                    }
+                }
+                'A' {
+                    name = "&aДобавить друга"
+                    head = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjBiNTVmNzQ2ODFjNjgyODNhMWMxY2U1MWYxYzgzYjUyZTI5NzFjOTFlZTM0ZWZjYjU5OGRmMzk5MGE3ZTcifX19"
+                    lore {
+                        -"&fВы можете добавить до"
+                        -"&a${User[player].maxSize} &fигроков в друзья"
+                        -""
+                        -"&aНажмите, чтобы добавить"
+                    }
+                    actions {
+                        if (CooperationApi.playerWithoutFriend(player).isEmpty()) {
+                            player.message("&fУ вас &cнет &fигроков, которых вы можете добавить в друзья")
+                        } else {
+                            playerListFriendMenu(player)
+                        }
+                    }
+                }
+                'B' {
+                    name = "&aВернуться назад"
+                    material = Material.ARROW
+                    condition { backProfile }
+                    actions {
+                        ru.snapix.profile.PanelStorage.profile(player)
+                    }
+                }
+            }
+        }
+    }
+
+    fun playerListFriendMenu(player: Player) {
+        generatorPanel<NetworkPlayer>(player) {
+            title = "Список игроков"
+            update = 1.seconds
+
+            generatorSource {
+                CooperationApi.playerWithoutFriend(player).toList()
+            }
+            generatorOutput = {
+                Item(
+                    name = "&a${it.getName()}",
+                    head = it.getName(),
+                    lore = listOf(
+                        "&fВы можете отправить запрос",
+                        "&fна дружбу этому игроку",
+                        "",
+                        "&aНажмите, чтобы отправить",
+                    ),
+                    clickAction = {
+                        Bukkit.dispatchCommand(player, "friend add ${it.getName()}")
+                        friendMenu(player)
+                    }
+                )
+            }
+            comparator = compareBy { it.getName() }
+
+            layout {
+                -"FFFFFFFFF"
+                -"F       F"
+                -"F       F"
+                -"F       F"
+                -"FFFFFFFFF"
+                -"PFFFRFFFN"
+            }
+
+            items {
+                'F' {
+                    material = Material.AIR
+                }
+                'R' {
+                    material = Material.ARROW
+                    name = "&aВернуться"
+                    actions {
+                        friendMenu(player)
+                    }
+                }
+                'P' {
+                    material = Material.ARROW
+                    name = "&aПредыдущая страница"
+                    condition { prevPage() }
+                    actions {
+                        prevPage()
+                    }
+                }
+                'N' {
+                    material = Material.ARROW
+                    name = "&aСледующая страница"
                     condition { nextPage() }
                     actions {
                         nextPage()

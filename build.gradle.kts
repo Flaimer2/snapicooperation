@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.serialization)
     alias(libs.plugins.plugin.yml.bukkit)
     alias(libs.plugins.kapt)
+    `maven-publish`
 }
 
 group = "ru.snapix"
@@ -25,6 +26,7 @@ dependencies {
     compileOnly(libs.luckperms)
     compileOnly(libs.balancer)
     compileOnly(libs.placeholderapi)
+    compileOnly(libs.profile)
 }
 
 kotlin {
@@ -45,4 +47,15 @@ bukkit {
     author = "SnapiX"
     website = "https://mcsnapix.ru"
     depend = listOf("SnapiLibrary")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            artifactId = project.name.lowercase()
+            groupId = group.toString()
+
+            from(components["java"])
+        }
+    }
 }

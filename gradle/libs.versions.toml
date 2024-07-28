@@ -9,6 +9,7 @@ plugin-yml-bukkit = "0.6.0"
 luckperms = "5.4"
 balancer = "1.5"
 velocity = "3.2.0-SNAPSHOT"
+profile = "1.0.0"
 
 [libraries]
 velocityapi = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
@@ -19,6 +20,7 @@ bukkit = { module = "com.destroystokyo.paper:paper-api", version.ref = "paper-ap
 placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
 luckperms = { module = "net.luckperms:api", version.ref = "luckperms" }
 balancer = { module = "ru.snapix:snapibalancer-bukkit", version.ref = "balancer" }
+profile = { module = "ru.snapix:snapiprofile", version.ref = "profile" }
 
 [plugins]
 jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -92,6 +92,10 @@ interface MainConfig {
     @ConfKey("default-max-size")
     fun defaultMaxSize(): Int
 
+    @DefaultInteger(4)
+    @ConfKey("limit-invite-friend")
+    fun limitInviteFriend(): Int
+
     @DefaultInteger(60)
     @ConfKey("invitation-delay")
     fun invitationDelay(): Int

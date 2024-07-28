@@ -6,10 +6,7 @@ import org.bukkit.entity.Player
 import ru.snapix.library.SnapiLibrary
 import ru.snapix.library.bukkit.utils.sendMessage
 import ru.snapix.library.libs.commands.BaseCommand
-import ru.snapix.library.libs.commands.annotation.CatchUnknown
-import ru.snapix.library.libs.commands.annotation.CommandAlias
-import ru.snapix.library.libs.commands.annotation.Default
-import ru.snapix.library.libs.commands.annotation.Subcommand
+import ru.snapix.library.libs.commands.annotation.*
 import ru.snapix.library.utils.message
 import ru.snapix.library.utils.stripColor
 import ru.snapix.library.utils.translateAlternateColorCodes
@@ -22,6 +19,7 @@ class PartyCommand : BaseCommand() {
     private val config get() = Settings.message.party().commands()
 
     @Default
+    @CommandCompletion("@nothing")
     fun default(player: Player) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         val party = Party[networkPlayer]
@@ -35,11 +33,13 @@ class PartyCommand : BaseCommand() {
 
     @CatchUnknown
     @Subcommand("%party_command_help")
+    @CommandCompletion("@nothing")
     fun help(sender: CommandSender) {
         sender.sendMessage(config.help().map { translateAlternateColorCodes(it) }.toTypedArray())
     }
 
     @Subcommand("%party_command_disband")
+    @CommandCompletion("@nothing")
     fun disband(player: Player) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         val party = Party[networkPlayer]
@@ -55,6 +55,7 @@ class PartyCommand : BaseCommand() {
     }
 
     @Subcommand("%party_command_invite")
+    @CommandCompletion("@player_without_party @nothing")
     fun invite(player: Player, args: Array<String>) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         val party = Party[networkPlayer] ?: Party.create(player)
@@ -97,13 +98,13 @@ class PartyCommand : BaseCommand() {
                 player.message(
                     config.invite().alreadyInPartyLeader(),
                     "name" to ntInvited.getName(),
-                    "party_leader" to partyInvited.leader
+                    "party_leader" to partyInvited.leader.getName()
                 )
             } else {
                 player.message(
                     config.invite().alreadyInParty(),
                     "name" to ntInvited.getName(),
-                    "party_leader" to partyInvited.leader
+                    "party_leader" to partyInvited.leader.getName()
                 )
             }
             return
@@ -113,7 +114,7 @@ class PartyCommand : BaseCommand() {
             player.message(
                 config.invite().alreadyInvite(),
                 "name" to ntInvited.getName(),
-                "party_leader" to party.leader
+                "party_leader" to party.leader.getName()
             )
             return
         }
@@ -122,7 +123,7 @@ class PartyCommand : BaseCommand() {
             player.message(
                 config.invite().fullParty(),
                 "name" to ntInvited.getName(),
-                "party_leader" to party.leader,
+                "party_leader" to party.leader.getName(),
                 "size" to party.size,
                 "max_size" to party.maxSize
             )
@@ -133,6 +134,7 @@ class PartyCommand : BaseCommand() {
     }
 
     @Subcommand("%party_command_accept")
+    @CommandCompletion("@player_invite @nothing")
     fun accept(player: Player, args: Array<String>) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         if (Party[networkPlayer] != null) {
@@ -181,6 +183,7 @@ class PartyCommand : BaseCommand() {
     }
 
     @Subcommand("%party_command_deny")
+    @CommandCompletion("@player_invite @nothing")
     fun deny(player: Player, args: Array<String>) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         if (Party[networkPlayer] != null) {
@@ -229,6 +232,7 @@ class PartyCommand : BaseCommand() {
     }
 
     @Subcommand("%party_command_remove")
+    @CommandCompletion("@player_in_you_party @nothing")
     fun remove(player: Player, args: Array<String>) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         val party = Party[networkPlayer]
@@ -281,6 +285,7 @@ class PartyCommand : BaseCommand() {
     }
 
     @Subcommand("%party_command_chat")
+    @CommandCompletion("@nothing")
     fun chat(player: Player, args: Array<String>) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         val party = Party[networkPlayer]
@@ -307,6 +312,7 @@ class PartyCommand : BaseCommand() {
     }
 
     @Subcommand("%party_command_leave")
+    @CommandCompletion("@nothing")
     fun leave(player: Player) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         val party = Party[networkPlayer]
@@ -324,6 +330,7 @@ class PartyCommand : BaseCommand() {
     }
 
     @Subcommand("%party_command_lead")
+    @CommandCompletion("@player_in_you_party @nothing")
     fun lead(player: Player, args: Array<String>) {
         val networkPlayer = SnapiLibrary.getPlayer(player.name)
         val party = Party[networkPlayer]
