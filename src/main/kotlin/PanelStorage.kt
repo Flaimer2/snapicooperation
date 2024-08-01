@@ -12,6 +12,7 @@ import ru.snapix.library.bukkit.panel.nextPage
 import ru.snapix.library.bukkit.panel.prevPage
 import ru.snapix.library.network.player.NetworkPlayer
 import ru.snapix.library.network.player.OfflineNetworkPlayer
+import ru.snapix.library.network.player.OnlineNetworkPlayer
 import ru.snapix.library.utils.message
 import ru.snapix.library.utils.toDate
 import ru.snapix.snapicooperation.api.CooperationApi
@@ -416,7 +417,7 @@ object PanelStorage {
                             head = it.name,
                             lore = listOf(
                                 "",
-                                "&fСтатус: &cОффлайн",
+                                "&fСтатус: &cОфлайн",
                                 "",
                                 "&cНажмите СКМ, чтобы удалить из друзей",
                                 "&cНажмите ПКМ, чтобы открыть профиль",
@@ -512,6 +513,9 @@ object PanelStorage {
                         "&fВы можете отправить запрос",
                         "&fна дружбу этому игроку",
                         "",
+                        "&fУровень: &a${getStatisticInt(it, "alonsolevels_lastlevel")}",
+                        "&fЛюбимый режим: {favourite_game}",
+                        "",
                         "&aНажмите, чтобы отправить",
                     ),
                     clickAction = {
@@ -559,6 +563,40 @@ object PanelStorage {
                     }
                 }
             }
+
+            replacements {
+                - ("favourite_game" to {
+                    val networkPlayer = OnlineNetworkPlayer(player.name)
+                    val map = mapOf(
+                        "skywars" to getStatisticInt(networkPlayer, "skywars_played"),
+                        "bedwars" to getStatisticInt(
+                            networkPlayer,
+                            "bedwars_gamesplayed"
+                        ),
+                        "murdermystery" to getStatisticInt(networkPlayer, "murdermystery_games_played"),
+                        "thebridge" to getStatisticInt(
+                            networkPlayer,
+                            "thebridge_gamesplayed"
+                        )
+                    ).filter { it.value > 0 }
+                    val max = map.maxByOrNull { it.value }
+                    when (max?.key) {
+                        "skywars" -> "&bSkyWars"
+                        "bedwars" -> "&cBedWars"
+                        "murdermystery" -> "&eMurderMystery"
+                        "thebridge" -> "&9TheBridge"
+                        else -> "&cНет"
+                    }
+                })
+            }
+        }
+    }
+
+    fun getStatisticInt(player: NetworkPlayer, placeholder: String): Int {
+        return try {
+            player.getStatistics()[placeholder]!!.invoke().toString().toInt()
+        } catch (_: Exception) {
+            0
         }
     }
 }

@@ -20,8 +20,8 @@ class User(val name: String, val friends: MutableList<String>, val invitations: 
             val api = LuckPermsProvider.get()
             val user = api.userManager.getUser(name) ?: return Settings.config.defaultMaxSize()
             return user.cachedData.permissionData.permissionMap
-                .filter { it.key.startsWith("friend.maxsize") && it.value }.keys
-                .mapNotNull { it.removePrefix("friend.maxsize").toIntOrNull() }.maxOrNull()
+                .filter { it.key.startsWith("friend.maxsize.") && it.value }.keys
+                .mapNotNull { it.removePrefix("friend.maxsize.").toIntOrNull() }.maxOrNull()
                 ?: Settings.config.defaultMaxSize()
         }
 

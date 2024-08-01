@@ -15,7 +15,7 @@ object Commands : BukkitCommands(plugin, PartyCommand(), FriendCommand()) {
     override fun registerCommandCompletions() {
         val commandCompletions = manager.commandCompletions
         commandCompletions.registerAsyncCompletion("player_without_party") { context ->
-            CooperationApi.playerWithoutParty().map { it.getName() }
+            CooperationApi.playerWithoutParty().map { context.player.name }
         }
         commandCompletions.registerAsyncCompletion("player_invite") { context ->
             val player = context.player
